@@ -1,0 +1,155 @@
+<!--
+  index.html-update
+  ─────────────────────────────────────────────────────────────────────────────
+  Paste the blocks below into your existing WebPatch/index.html as instructed.
+
+  ❶  In the <head> section, the ai-classifier-bridge.js style block is optional
+     but gives you a minimal on-screen readout of the live classification.
+
+  ❷  The <script src="./ai-classifier-bridge.js"> tag goes AFTER pd4web.js.
+
+  ❸  The critical change inside the existing Pd4WebModule(...).then(…) block:
+       Add   window.Pd4WebInstance = Pd4Web;
+       This exposes the Pd4Web instance so the bridge can call sendFloat().
+
+  ❹  The bridge init block starts the classifier once the mic is requested.
+     It integrates with the existing "Start Mic Analysis" button from
+     urban-perceptual-state.js so both analysers share a single mic request.
+  ─────────────────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ❶  OPTIONAL: add inside <head> for a small live classification readout ── -->
+<style>
+    .ai-classifier-hud {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: var(--fg, #111);
+        background: rgba(250, 250, 250, 0.92);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        padding: 10px 12px;
+        min-width: 160px;
+        z-index: 30;
+        box-shadow:
+            rgba(14, 30, 37, 0.12) 0px 2px 4px 0px,
+            rgba(14, 30, 37, 0.22) 0px 12px 24px 0px;
+        backdrop-filter: blur(10px);
+    }
+    .ai-classifier-hud-title {
+        font-weight: 700;
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+    .ai-classifier-hud-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 3px;
+    }
+    .ai-classifier-hud-label { opacity: 0.6; }
+    .ai-classifier-hud-val   { font-weight: 600; }
+    .ai-classifier-hud-class {
+        margin-top: 6px;
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: rgba(20, 20, 20, 0.08);
+        text-align: center;
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.03em;
+    }
+</style>
+
+
+<!-- ❷  LOAD THE BRIDGE — add after <script src="./pd4web.js"></script> ──────── -->
+<script src="./ai-classifier-bridge.js"></script>
+
+
+<!-- ❸  EXPOSE Pd4WebInstance — modify your existing Pd4WebModule block:
+        Find the lines:
+            const Pd4Web = new Pd4WebModulePromise.Pd4Web();
+            Pd4Web.openPatch("index.pd", { ... });
+        And add ONE line immediately after openPatch():
+            window.Pd4WebInstance = Pd4Web;
+
+        The complete modified block should look like this: -->
+<script>
+    fetchWithProgress("./pd4web.wasm")
+        .then((wasmBuffer) => {
+            Pd4WebModule({ wasmBinary: wasmBuffer }).then((Pd4WebModulePromise) => {
+                const Pd4Web = new Pd4WebModulePromise.Pd4Web();
+                Pd4Web.openPatch("index.pd", {
+                    soundToggleId: "Pd4WebAudioSwitch",
+                });
+                // ← ADD THIS LINE so ai-classifier-bridge.js can send to Pd
+                window.Pd4WebInstance = Pd4Web;
+
+                const wasmLoader = document.getElementById("wasm-loader");
+                statusElement.style.display = "none";
+                progressElement.style.display = "none";
+                wasmLoader.style.display = "none";
+            });
+        })
+        .catch((err) => {
+            statusElement.textContent = "Failed to load WASM.";
+            console.error(err);
+        });
+</script>
+
+
+<!-- ❹  BRIDGE INIT — add this block just before </body> ──────────────────── -->
+<div class="ai-classifier-hud" id="AiClassifierHud" style="display:none">
+    <div class="ai-classifier-hud-title">AI Sound Classifier</div>
+    <div class="ai-classifier-hud-row">
+        <span class="ai-classifier-hud-label">horn</span>
+        <span class="ai-classifier-hud-val" id="ai-prob-horn">0%</span>
+    </div>
+    <div class="ai-classifier-hud-row">
+        <span class="ai-classifier-hud-label">motor</span>
+        <span class="ai-classifier-hud-val" id="ai-prob-motor">0%</span>
+    </div>
+    <div class="ai-classifier-hud-row">
+        <span class="ai-classifier-hud-label">chatter</span>
+        <span class="ai-classifier-hud-val" id="ai-prob-chatter">0%</span>
+    </div>
+    <div class="ai-classifier-hud-row">
+        <span class="ai-classifier-hud-label">silence</span>
+        <span class="ai-classifier-hud-val" id="ai-prob-silence">0%</span>
+    </div>
+    <div class="ai-classifier-hud-class" id="ai-stable-class">silence</div>
+</div>
+
+<script>
+    // Pre-load the model JSON so it is ready before the user presses Start.
+    window.AiClassifierBridge.loadModel().catch(function (err) {
+        console.warn("[AiClassifierBridge] model pre-load failed:", err);
+    });
+
+    // Hook: start the AI classifier whenever the urban-perceptual-state mic starts.
+    // The classifier shares the Pd4Web audio context via its own getUserMedia call.
+    window.addEventListener("urban-perceptual-state-update", function onFirstUpdate() {
+        window.removeEventListener("urban-perceptual-state-update", onFirstUpdate);
+        if (!window.AiClassifierBridge.running) {
+            window.AiClassifierBridge.start().then(function () {
+                document.getElementById("AiClassifierHud").style.display = "";
+            }).catch(function (err) {
+                console.warn("[AiClassifierBridge] auto-start failed:", err);
+            });
+        }
+    });
+
+    // Optional: update the HUD on every analysis frame.
+    window.addEventListener("ai-classifier-update", function (e) {
+        var snap = e.detail;
+        var p    = snap.probabilities;
+        document.getElementById("ai-prob-horn").textContent    = Math.round(p.horn    * 100) + "%";
+        document.getElementById("ai-prob-motor").textContent   = Math.round(p.motor   * 100) + "%";
+        document.getElementById("ai-prob-chatter").textContent = Math.round(p.chatter * 100) + "%";
+        document.getElementById("ai-prob-silence").textContent = Math.round(p.silence * 100) + "%";
+        document.getElementById("ai-stable-class").textContent = snap.stableClass;
+    });
+</script>

@@ -1,0 +1,95 @@
+; Main_scenes_adc.pd-update
+; ─────────────────────────────────────────────────────────────────────────────
+; Pd receive objects for the AI classifier bridge.
+;
+; HOW TO USE
+; ──────────
+; 1. Open Main_scenes_adc.pd in Pure Data.
+; 2. Enter Edit mode (Ctrl+E).
+; 3. Copy each #X obj line below and paste it into the patch canvas, or
+;    create the receive / r objects by hand at the coordinates shown.
+; 4. Connect the outlet of each receive object to whatever synthesis parameters
+;    you want to control.  See the ROUTING HINTS section at the bottom for
+;    suggested connections.
+;
+; RECEIVE NAMES  (sent by ai-classifier-bridge.js every ~100 ms)
+; ──────────────
+;   aiClass    integer  0 = silence  |  1 = chatter  |  2 = motor  |  3 = horn
+;   aiSilence  float    silence  confidence  0 – 1
+;   aiChatter  float    chatter  confidence  0 – 1
+;   aiMotor    float    motor    confidence  0 – 1
+;   aiHorn     float    horn     confidence  0 – 1
+;   aiRmsDb    float    current RMS level in dB  (useful for gating / VU)
+; ─────────────────────────────────────────────────────────────────────────────
+
+; ── Paste these lines into your patch (they create a tidy labelled block) ───
+
+#X obj 1400 40 r aiClass;
+#X obj 1400 70 r aiSilence;
+#X obj 1400 100 r aiMotor;
+#X obj 1400 130 r aiChatter;
+#X obj 1400 160 r aiHorn;
+#X obj 1400 190 r aiRmsDb;
+
+; ── Optional: floatatom displays so you can see the live values ─────────────
+
+#X floatatom 1460 40  3 0 3 0 class - - 0;
+#X floatatom 1460 70  5 0 1 0 silence - - 0;
+#X floatatom 1460 100 5 0 1 0 motor - - 0;
+#X floatatom 1460 130 5 0 1 0 chatter - - 0;
+#X floatatom 1460 160 5 0 1 0 horn - - 0;
+#X floatatom 1460 190 5 -90 0 0 rmsDb - - 0;
+
+; ── Connections (manual wiring in the GUI) ───────────────────────────────────
+; Pure Data connection syntax uses numeric object indices relative to the
+; enclosing canvas, so the exact #X connect lines will depend on where you
+; paste the objects in your patch.  After pasting, wire each receive outlet
+; to its matching floatatom inlet by dragging in the GUI, or generate the
+; correct #X connect lines with the object indices your patch assigns.
+;
+; Conceptual wiring (do in the GUI):
+;   [r aiClass]   outlet 0  →  [floatatom class]   inlet 0
+;   [r aiSilence] outlet 0  →  [floatatom silence] inlet 0
+;   [r aiMotor]   outlet 0  →  [floatatom motor]   inlet 0
+;   [r aiChatter] outlet 0  →  [floatatom chatter] inlet 0
+;   [r aiHorn]    outlet 0  →  [floatatom horn]    inlet 0
+;   [r aiRmsDb]   outlet 0  →  [floatatom rmsDb]   inlet 0
+
+; ─────────────────────────────────────────────────────────────────────────────
+; ROUTING HINTS
+; ─────────────
+; The values below are all 0–1 floats (except aiClass which is 0–3 and
+; aiRmsDb which is in dB).  Scale them with [* N] or [line~] ramps before
+; routing to synthesis parameters.
+;
+; Suggested connections in Main_scenes_adc.pd:
+;
+;   [r aiHorn]         → [* 1]  → gate/trigger for a horn-response layer
+;                      → add to str1Level or hov2Level send for horn-activated mix
+;
+;   [r aiMotor]        → [* 1]  → modulate wnd1Speed (engine tempo feel)
+;                      → drive a low-frequency oscillator intensity
+;
+;   [r aiChatter]      → [* 1]  → open str1Prob gate (more strings when talking)
+;                      → route to reverb wetness (arp3Reverb)
+;
+;   [r aiSilence]      → [* -60] → [+ 0] → quiet the output bus via volume send
+;
+;   [r aiClass]        → [sel 0 1 2 3] to branch on silence/chatter/motor/horn
+;                        sel outlet 0 → silence actions
+;                        sel outlet 1 → chatter actions
+;                        sel outlet 2 → motor actions
+;                        sel outlet 3 → horn actions
+;
+;   [r aiRmsDb]        → normalise 0–1 with [/ -60] [abs] for a VU-style envelope
+;
+; Example: horn-triggered arpeggiator enable
+;   [r aiHorn] → [> 0.5] → [sel 1] → [bng] → [send arp3Toggle]
+;
+; Example: branch on classified class
+;   [r aiClass] → [sel 0 1 2 3]
+;                  |0 silence  → [msg 0] → [send str1Toggle-r]
+;                  |1 chatter  → [msg 1] → [send str1Toggle-r]
+;                  |2 motor    → [msg 60] → [send hov2master-r]
+;                  |3 horn     → [bng]   → ... (trigger event)
+; ─────────────────────────────────────────────────────────────────────────────
