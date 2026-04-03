@@ -126,14 +126,6 @@
                 animation: pulse 1s infinite;
             }
 
-            .urban-state-host {
-                position: fixed;
-                left: 12px;
-                bottom: 12px;
-                width: min(340px, calc(100vw - 24px));
-                z-index: 20;
-            }
-
             .urban-state-panel {
                 font-family:
                     ui-monospace,
@@ -253,8 +245,6 @@
 
         <!-- All the styles are in the pd4web.style.css -->
         <span class="pd4web-sound-switch" id="Pd4WebAudioSwitch"></span>
-        <div class="urban-state-host" id="UrbanPerceptualHost"></div>
-        <script src="./urban-perceptual-state.js"></script>
         <script>
             const statusElement = document.getElementById("status");
             const progressElement = document.getElementById("progress");
@@ -304,30 +294,70 @@
                     console.error(err);
                 });
         </script>
+
+        <!-- GPS Simulator -->
+        <script src="./WebPatch/gps-simulator.js"></script>
+
+        <!-- GPS Zone UI -->
+        <div id="gpsHost" style="position: fixed; left: 12px; bottom: 12px; width: min(260px, calc(100vw - 24px)); z-index: 20;"></div>
         <script>
-            if (typeof window.setupUrbanPerceptualStatePrototype === "function") {
-                window.setupUrbanPerceptualStatePrototype({
-                    containerId: "UrbanPerceptualHost",
-                    analyzer: {
-                        fftSize: 1024,
-                        updateIntervalMs: 90,
-                        inputAnalysisGain: 3,
-                        featureSmoothingAlpha: 0.28,
-                        scoreSmoothingAlpha: 0.24,
-                        minStateHoldMs: 520,
-                        switchMargin: 0.04,
-                        silenceDbThreshold: -57,
-                        silenceHoldMs: 1400,
-                    },
-                });
-            } else {
-                const host = document.getElementById("UrbanPerceptualHost");
-                host.textContent = "Urban perceptual state module failed to load.";
+        (function () {
+            var panel = document.createElement('section');
+            panel.className = 'urban-state-panel';
+            panel.style.minWidth = '220px';
+            panel.innerHTML =
+                '<div class="urban-state-header">' +
+                    '<div class="urban-state-title">📍 GPS Simulator</div>' +
+                    '<div class="urban-state-pill" id="gpsZonePill">home</div>' +
+                '</div>' +
+                '<div id="gpsCoords" style="font-size:10px; margin-bottom:10px; color:#555;"></div>' +
+                '<div id="gpsZoneButtons" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>';
+
+            document.getElementById('gpsHost').appendChild(panel);
+
+            function updateCoords() {
+                if (!window.gpsSimulator) return;
+                var coords = window.gpsSimulator.getCurrentCoordinates();
+                document.getElementById('gpsCoords').textContent =
+                    coords.zoneName + '\n' +
+                    'lat ' + coords.lat.toFixed(5) + '  lng ' + coords.lng.toFixed(5);
+                document.getElementById('gpsZonePill').textContent = coords.zone;
+
+                if (window.Pd) {
+                    window.Pd.sendFloat('gpsLat', coords.lat);
+                    window.Pd.sendFloat('gpsLng', coords.lng);
+                }
             }
+
+            function buildButtons() {
+                if (!window.gpsSimulator) return;
+                var container = document.getElementById('gpsZoneButtons');
+                var zones = window.gpsSimulator.getZones();
+                zones.forEach(function (z) {
+                    var btn = document.createElement('button');
+                    btn.textContent = z.name;
+                    btn.style.cssText = 'padding:6px 8px; background:#111; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:11px; font-family:inherit;';
+                    btn.addEventListener('click', function () {
+                        window.gpsSimulator.setZone(z.id);
+                        updateCoords();
+                        container.querySelectorAll('button').forEach(function (b) {
+                            b.style.background = '#111';
+                        });
+                        btn.style.background = '#3a7bd5';
+                    });
+                    container.appendChild(btn);
+                });
+                container.querySelector('button').style.background = '#3a7bd5';
+            }
+
+            buildButtons();
+            updateCoords();
+            setInterval(updateCoords, 2000);
+        }());
         </script>
 
         <!-- AI Classifier Bridge -->
-        <script src="./ai-classifier-bridge.js"></script>
+        <script src="./WebPatch/ai-classifier-bridge.js"></script>
 
         <!-- AI Control Panel UI -->
         <div id="aiControlHost" style="position: fixed; right: 12px; bottom: 12px; z-index: 20;"></div>
@@ -339,7 +369,7 @@
             panel.style.cssText = 'font-family: monospace; color: #333; background: rgba(250, 250, 250, 0.95); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 10px; padding: 12px; box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2); min-width: 280px;';
             panel.innerHTML = '<div style="font-size: 12px; font-weight: 600; margin-bottom: 10px;">🎵 Urban AI</div><div style="display: flex; gap: 8px; margin-bottom: 10px;"><button id="aiStartBtn" style="flex: 1; padding: 8px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 11px;">🎤 Start</button><button id="aiStopBtn" style="flex: 1; padding: 8px; background: #ccc; color: white; border: none; border-radius: 5px; cursor: not-allowed; font-weight: 600; font-size: 11px;" disabled>⏹️ Stop</button></div><div style="font-size: 10px; color: #666;"><div style="margin-bottom: 6px;">Sound: <span id="aiClass" style="font-weight: 600; color: #667eea;">---</span></div><div style="margin-bottom: 6px;">Conf: <span id="aiConfidence">---</span></div><div style="margin-bottom: 6px;">Grain: <span id="aiGrainVal">10</span></div><div style="margin-bottom: 6px;">Str: <span id="aiStrVal">100</span>%</div><div style="margin-bottom: 6px;">Wet: <span id="aiWetVal">55</span>%</div><div>PitHi: <span id="aiPitHiVal">12</span></div></div>';
             host.appendChild(panel);
-            
+
             document.getElementById('aiStartBtn').onclick = async () => {
                 if (window.aiClassifier) {
                     await window.aiClassifier.startMicrophoneClassification();
@@ -349,7 +379,7 @@
                     document.getElementById('aiStopBtn').style.background = '#667eea';
                 }
             };
-            
+
             document.getElementById('aiStopBtn').onclick = () => {
                 if (window.aiClassifier) {
                     window.aiClassifier.stopClassification();
@@ -359,7 +389,7 @@
                     document.getElementById('aiStopBtn').style.background = '#ccc';
                 }
             };
-            
+
             window.addEventListener('ai-classification', (event) => {
                 const { soundClass, confidence, params } = event.detail;
                 document.getElementById('aiClass').textContent = soundClass.toUpperCase();
@@ -368,11 +398,8 @@
                 document.getElementById('aiStrVal').textContent = params.aiStr;
                 document.getElementById('aiWetVal').textContent = params.aiWet;
                 document.getElementById('aiPitHiVal').textContent = params.aiPitHi;
-                
+
                 if (window.Pd) {
-                    // Route AI params to the actual Pd receive objects in
-                    // street_aura_session06_idlework (loaded from Libs/).
-                    // pd4web API: sendFloat(receiverName, floatValue)
                     window.Pd.sendFloat('street06GrainRate_idlework', params.aiGrain);
                     window.Pd.sendFloat('street06StretchProb_idlework', params.aiStr);
                     window.Pd.sendFloat('auraAmt_idlework', params.aiWet / 100);
