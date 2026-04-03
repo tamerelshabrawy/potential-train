@@ -213,10 +213,10 @@
         }
 
         /* --- Normalised helpers ------------------------------------------- */
-        var speechRatio  = clamp(speechBand  / (totalPower + EPSILON));
-        var highRatio    = clamp(highBand     / (totalPower + EPSILON));
-        var levelNorm    = clamp((rmsDb + 60) / 42); /* –60 dBFS → 0, –18 dBFS → 1 */
-        var centroidNorm = clamp((centroidHz - 500) / 3500);
+        var speechRatio  = clamp(speechBand  / (totalPower + EPSILON), 0, 1);
+        var highRatio    = clamp(highBand     / (totalPower + EPSILON), 0, 1);
+        var levelNorm    = clamp((rmsDb + 60) / 42, 0, 1); /* –60 dBFS → 0, –18 dBFS → 1 */
+        var centroidNorm = clamp((centroidHz - 500) / 3500, 0, 1);
 
         /* --- Raw class scores --------------------------------------------- */
         var raw = {
@@ -229,7 +229,8 @@
                 centroidNorm * 0.30 +
                 highRatio    * 0.25 +
                 (1 - flatness) * 0.15 +
-                flux         * 0.10
+                flux         * 0.10,
+                0, 1
             ),
 
             /*
@@ -240,7 +241,8 @@
                 levelNorm         * 0.20 +
                 flatness          * 0.40 +
                 (1 - speechRatio) * 0.25 +
-                centroidNorm      * 0.15
+                centroidNorm      * 0.15,
+                0, 1
             ),
 
             /*
@@ -251,7 +253,8 @@
                 speechRatio      * 0.50 +
                 (1 - flatness)   * 0.20 +
                 (1 - highRatio)  * 0.15 +
-                levelNorm        * 0.15
+                levelNorm        * 0.15,
+                0, 1
             ),
 
             silence: 0, /* handled above */
