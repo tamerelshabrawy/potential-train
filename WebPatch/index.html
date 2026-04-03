@@ -1,52 +1,397 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>WebPatch</title>
-    <script src="ai-classifier-bridge.js"></script>
-</head>
-<body>
-    <div id="ai-control-panel">
-        <button id="start-button">Start</button>
-        <button id="stop-button">Stop</button>
-        <div>Sound Class: <span id="sound-class">-</span></div>
-        <div>Confidence: <span id="confidence">-</span></div>
-        <div>Grain: <span id="grain">-</span></div>
-        <div>Str: <span id="str">-</span></div>
-        <div>Wet: <span id="wet">-</span></div>
-        <div>PitHi: <span id="pithi">-</span></div>
-    </div>
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Pd4Web</title>
+        <meta charset="UTF-8" />
+        <!-- WebApp manifest -->
+        <link rel="manifest" href="manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="apple-touch-icon" href="icon-192.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <!-- Always BEFORE pd4web.js (it update COI) -->
+        <script src="./pd4web.threads.js"></script>
+        <!-- Main modules -->
 
-    <script>
-        document.getElementById('start-button').addEventListener('click', function() {
-            // Initialize AI classification
-            startClassification();
-        });
+        <script src="./pd4web.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <style>
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --bg: rgb(255, 255, 255);
+                    --fg: rgb(0, 0, 0, 0.9);
+                }
+            }
 
-        document.getElementById('stop-button').addEventListener('click', function() {
-            // Stop AI classification
-            stopClassification();
-        });
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: rgb(48, 48, 48);
+                    --fg: rgb(255, 255, 255, 0.9);
 
-        function startClassification() {
-            // Add your AI classification start logic here
-            console.log('AI Classification Started');
-            // Update UI display logic as needed
+                    .pd4web-sound-switch {
+                        filter: invert(1);
+                    }
+                }
+            }
+
+            body {
+                font-size: 10px;
+                touch-action: pan-x pan-y;
+                background-color: var(--bg);
+            }
+
+            span {
+                color: var(--fg);
+            }
+
+            #wasm-loader {
+                position: fixed; 
+                top: 10px; 
+                left: 50%; 
+                transform: translate(-50%, -50%); 
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 200px;
+                padding: 8px;
+                border-radius: 5px;
+                background-color: rgba(0, 0, 0, 0.05);
+                box-shadow:
+                    rgba(14, 30, 37, 0.12) 0px 2px 4px 0px,
+                    rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+            }
+
+            #status {
+                font-size: 10px;
+                text-align: center;
+                margin-bottom: 4px;
+                color: var(--fg);
+            }
+
+            #progress {
+                width: 150px;
+                height: 8px;
+                border-radius: 4px;
+            }
+
+            .pd4web-patch-canvas {
+                tabindex: 0;
+                margin: 10px auto;
+                display: flex;
+                border-radius: 5px;
+                box-shadow:
+                    rgba(14, 30, 37, 0.12) 0px 2px 4px 0px,
+                    rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+            }
+
+            .pd4web-patch-canvas:focus {
+                box-shadow:
+                    rgba(100, 30, 37, 0.12) 0px 2px 4px 0px,
+                    rgba(100, 30, 37, 0.32) 0px 2px 16px 0px;
+                outline: none;
+            }
+
+            .pd4web-sound-switch {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 25px;
+                height: 25px;
+                margin: 0 auto;
+                transform: none;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes pulse {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.2);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+            .pulse-icon {
+                animation: pulse 1s infinite;
+            }
+
+            .urban-state-host {
+                position: fixed;
+                left: 12px;
+                bottom: 12px;
+                width: min(340px, calc(100vw - 24px));
+                z-index: 20;
+            }
+
+            .urban-state-panel {
+                font-family:
+                    ui-monospace,
+                    "SF Mono",
+                    Menlo,
+                    Monaco,
+                    Consolas,
+                    "Liberation Mono",
+                    monospace;
+                color: var(--fg);
+                background: rgba(250, 250, 250, 0.92);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 10px;
+                padding: 12px;
+                box-shadow:
+                    rgba(14, 30, 37, 0.12) 0px 2px 4px 0px,
+                    rgba(14, 30, 37, 0.22) 0px 12px 24px 0px;
+                backdrop-filter: blur(10px);
+            }
+
+            .urban-state-header,
+            .urban-state-actions,
+            .urban-state-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+            }
+
+            .urban-state-header {
+                margin-bottom: 10px;
+            }
+
+            .urban-state-title {
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .urban-state-pill {
+                padding: 4px 8px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 700;
+                background: rgba(20, 20, 20, 0.08);
+            }
+
+            .urban-state-actions {
+                margin-bottom: 10px;
+            }
+
+            .urban-state-actions button {
+                border: 0;
+                border-radius: 8px;
+                padding: 7px 10px;
+                cursor: pointer;
+                background: #111;
+                color: white;
+                font-size: 11px;
+            }
+
+            .urban-state-actions button[disabled] {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+
+            .urban-state-confidence {
+                font-size: 11px;
+            }
+
+            .urban-state-metrics {
+                display: grid;
+                gap: 8px;
+            }
+
+            .urban-state-row span {
+                min-width: 96px;
+                font-size: 11px;
+            }
+
+            .urban-state-meter {
+                flex: 1;
+                height: 8px;
+                border-radius: 999px;
+                background: rgba(20, 20, 20, 0.08);
+                overflow: hidden;
+            }
+
+            .urban-state-meter > div {
+                height: 100%;
+                width: 0%;
+                border-radius: inherit;
+                background: linear-gradient(90deg, #3a7bd5, #00d2ff);
+                transition: width 180ms ease;
+            }
+
+            .urban-state-panel[data-state="human_active"] .urban-state-meter > div {
+                background: linear-gradient(90deg, #00b894, #55efc4);
+            }
+
+            .urban-state-panel[data-state="harsh_mechanical"] .urban-state-meter > div {
+                background: linear-gradient(90deg, #ff512f, #dd2476);
+            }
+
+            .urban-state-error {
+                min-height: 14px;
+                margin-top: 8px;
+                font-size: 10px;
+                color: #b33939;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="wasm-loader" style="text-align: center; margin: 10px">
+            <span id="status">Loading...</span>
+            <progress id="progress" value="0" max="100" style="width: 300px"></progress>
+        </div>
+
+        <!-- All the styles are in the pd4web.style.css -->
+        <span class="pd4web-sound-switch" id="Pd4WebAudioSwitch"></span>
+        <div class="urban-state-host" id="UrbanPerceptualHost"></div>
+        <script src="./urban-perceptual-state.js"></script>
+        <script>
+            const statusElement = document.getElementById("status");
+            const progressElement = document.getElementById("progress");
+            function fetchWithProgress(url) {
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("GET", url, true);
+                    xhr.responseType = "arraybuffer";
+                    xhr.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const percent = Math.floor((event.loaded / event.total) * 100);
+                            progressElement.value = percent;
+                            statusElement.textContent = `Downloading WASM... ${percent}%`;
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            resolve(xhr.response);
+                        } else {
+                            reject(new Error(`Failed to load ${url}, status ${xhr.status}`));
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error(`Network error loading ${url}`));
+                    xhr.send();
+                });
+            }
+        </script>
+
+        <script>
+            fetchWithProgress("./pd4web.wasm")
+                .then((wasmBuffer) => {
+                    Pd4WebModule({ wasmBinary: wasmBuffer }).then((Pd4WebModulePromise) => {
+                        window.Pd = new Pd4WebModulePromise.Pd4Web();
+                        window.Pd.openPatch("index.pd", {
+                            soundToggleId: "Pd4WebAudioSwitch",
+                        });
+                        const wasmLoader = document.getElementById("wasm-loader");
+                        statusElement.style.display = "none";
+                        progressElement.style.display = "none";
+                        wasmLoader.style.display = "none";
+                    });
+                })
+                .catch((err) => {
+                    statusElement.textContent = "Failed to load WASM.";
+                    console.error(err);
+                });
+        </script>
+        <script>
+            if (typeof window.setupUrbanPerceptualStatePrototype === "function") {
+                window.setupUrbanPerceptualStatePrototype({
+                    containerId: "UrbanPerceptualHost",
+                    analyzer: {
+                        fftSize: 1024,
+                        updateIntervalMs: 90,
+                        inputAnalysisGain: 3,
+                        featureSmoothingAlpha: 0.28,
+                        scoreSmoothingAlpha: 0.24,
+                        minStateHoldMs: 520,
+                        switchMargin: 0.04,
+                        silenceDbThreshold: -57,
+                        silenceHoldMs: 1400,
+                    },
+                });
+            } else {
+                const host = document.getElementById("UrbanPerceptualHost");
+                host.textContent = "Urban perceptual state module failed to load.";
+            }
+        </script>
+
+        <!-- AI Classifier Bridge -->
+        <script src="./ai-classifier-bridge.js"></script>
+
+        <!-- AI Control Panel UI -->
+        <div id="aiControlHost" style="position: fixed; right: 12px; bottom: 12px; z-index: 20;"></div>
+
+        <script>
+        function initializeAIUI() {
+            const host = document.getElementById('aiControlHost');
+            const panel = document.createElement('div');
+            panel.style.cssText = 'font-family: monospace; color: #333; background: rgba(250, 250, 250, 0.95); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 10px; padding: 12px; box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2); min-width: 280px;';
+            panel.innerHTML = '<div style="font-size: 12px; font-weight: 600; margin-bottom: 10px;">🎵 Urban AI</div><div style="display: flex; gap: 8px; margin-bottom: 10px;"><button id="aiStartBtn" style="flex: 1; padding: 8px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 11px;">🎤 Start</button><button id="aiStopBtn" style="flex: 1; padding: 8px; background: #ccc; color: white; border: none; border-radius: 5px; cursor: not-allowed; font-weight: 600; font-size: 11px;" disabled>⏹️ Stop</button></div><div style="font-size: 10px; color: #666;"><div style="margin-bottom: 6px;">Sound: <span id="aiClass" style="font-weight: 600; color: #667eea;">---</span></div><div style="margin-bottom: 6px;">Conf: <span id="aiConfidence">---</span></div><div style="margin-bottom: 6px;">Grain: <span id="aiGrainVal">10</span></div><div style="margin-bottom: 6px;">Str: <span id="aiStrVal">100</span>%</div><div style="margin-bottom: 6px;">Wet: <span id="aiWetVal">55</span>%</div><div>PitHi: <span id="aiPitHiVal">12</span></div></div>';
+            host.appendChild(panel);
+            
+            document.getElementById('aiStartBtn').onclick = async () => {
+                if (window.aiClassifier) {
+                    await window.aiClassifier.startMicrophoneClassification();
+                    document.getElementById('aiStartBtn').disabled = true;
+                    document.getElementById('aiStartBtn').style.background = '#ccc';
+                    document.getElementById('aiStopBtn').disabled = false;
+                    document.getElementById('aiStopBtn').style.background = '#667eea';
+                }
+            };
+            
+            document.getElementById('aiStopBtn').onclick = () => {
+                if (window.aiClassifier) {
+                    window.aiClassifier.stopClassification();
+                    document.getElementById('aiStartBtn').disabled = false;
+                    document.getElementById('aiStartBtn').style.background = '#667eea';
+                    document.getElementById('aiStopBtn').disabled = true;
+                    document.getElementById('aiStopBtn').style.background = '#ccc';
+                }
+            };
+            
+            window.addEventListener('ai-classification', (event) => {
+                const { soundClass, confidence, params } = event.detail;
+                document.getElementById('aiClass').textContent = soundClass.toUpperCase();
+                document.getElementById('aiConfidence').textContent = (confidence * 100).toFixed(0) + '%';
+                document.getElementById('aiGrainVal').textContent = params.aiGrain;
+                document.getElementById('aiStrVal').textContent = params.aiStr;
+                document.getElementById('aiWetVal').textContent = params.aiWet;
+                document.getElementById('aiPitHiVal').textContent = params.aiPitHi;
+                
+                if (window.Pd) {
+                    // Route AI params to the actual Pd receive objects in
+                    // street_aura_session06_idlework (loaded from Libs/).
+                    // pd4web API: sendFloat(receiverName, floatValue)
+                    window.Pd.sendFloat('street06GrainRate_idlework', params.aiGrain);
+                    window.Pd.sendFloat('street06StretchProb_idlework', params.aiStr);
+                    window.Pd.sendFloat('auraAmt_idlework', params.aiWet / 100);
+                    window.Pd.sendFloat('street06PitchHi_idlework', params.aiPitHi);
+                }
+            });
         }
 
-        function stopClassification() {
-            // Add your AI classification stop logic here
-            console.log('AI Classification Stopped');
-            // Update UI display logic as needed
-        }
+        setTimeout(initializeAIUI, 1000);
+        </script>
 
-        function updateDisplay(soundClass, confidence, grain, str, wet, pitHi) {
-            document.getElementById('sound-class').innerText = soundClass;
-            document.getElementById('confidence').innerText = confidence;
-            document.getElementById('grain').innerText = grain;
-            document.getElementById('str').innerText = str;
-            document.getElementById('wet').innerText = wet;
-            document.getElementById('pithi').innerText = pitHi;
-        }
-    <\/script>
-</body>
+        <script>
+            // Create an App (installable using PWA)
+            // if ("serviceWorker" in navigator) {
+            //     navigator.serviceWorker
+            //         .register("pd4web.sw.js")
+            //         .then(() => console.log("Service Worker registered"))
+            //         .catch((err) => console.error("Service Worker registration failed:", err));
+            // }
+        </script>
+    </body>
 </html>

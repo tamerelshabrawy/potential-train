@@ -41,7 +41,7 @@
             }
 
             span {
-                color: @fg;
+                color: var(--fg);
             }
 
             #wasm-loader {
@@ -289,8 +289,8 @@
             fetchWithProgress("./pd4web.wasm")
                 .then((wasmBuffer) => {
                     Pd4WebModule({ wasmBinary: wasmBuffer }).then((Pd4WebModulePromise) => {
-                        const Pd4Web = new Pd4WebModulePromise.Pd4Web();
-                        Pd4Web.openPatch("index.pd", {
+                        window.Pd = new Pd4WebModulePromise.Pd4Web();
+                        window.Pd.openPatch("index.pd", {
                             soundToggleId: "Pd4WebAudioSwitch",
                         });
                         const wasmLoader = document.getElementById("wasm-loader");
@@ -370,10 +370,13 @@
                 document.getElementById('aiPitHiVal').textContent = params.aiPitHi;
                 
                 if (window.Pd) {
-                    window.Pd.send('aiGrain', [params.aiGrain]);
-                    window.Pd.send('aiStr', [params.aiStr / 100]);
-                    window.Pd.send('aiWet', [params.aiWet / 100]);
-                    window.Pd.send('aiPitHi', [params.aiPitHi]);
+                    // Route AI params to the actual Pd receive objects in
+                    // street_aura_session06_idlework (loaded from Libs/).
+                    // pd4web API: sendFloat(receiverName, floatValue)
+                    window.Pd.sendFloat('street06GrainRate_idlework', params.aiGrain);
+                    window.Pd.sendFloat('street06StretchProb_idlework', params.aiStr);
+                    window.Pd.sendFloat('auraAmt_idlework', params.aiWet / 100);
+                    window.Pd.sendFloat('street06PitchHi_idlework', params.aiPitHi);
                 }
             });
         }
