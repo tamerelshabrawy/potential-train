@@ -462,7 +462,7 @@
                 var infoDiv = document.createElement('div');
                 infoDiv.className = 'gps-zone-status';
                 infoDiv.style.cssText = 'margin-top:8px;line-height:1.7;';
-                infoDiv.innerHTML = 'Zone: <b>—</b><br>Pd zone: <b>—</b><br>Lat: — &nbsp; Lng: —';
+                infoDiv.innerHTML = 'Zone: <b>—</b><br>Pd zone: <b>—</b><br>Lat: — &nbsp; Lon: —';
                 panel.appendChild(infoDiv);
 
                 host.appendChild(panel);
@@ -473,7 +473,7 @@
                     infoDiv.innerHTML =
                         'Zone: <b>' + d.zoneName + '</b><br>' +
                         'Pd zone: <b>' + d.pdZone + '</b> → [r zone]<br>' +
-                        'Lat: ' + d.lat.toFixed(5) + ' &nbsp; Lng: ' + d.lng.toFixed(5);
+                        'Lat: ' + d.lat.toFixed(5) + ' &nbsp; Lon: ' + d.lon.toFixed(5);
 
                     // Highlight the active zone button
                     Object.keys(activeBtnRef).forEach(function (key) {

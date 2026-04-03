@@ -6,12 +6,12 @@
  * receiver (values 1–35 as defined in Zone_Harness.pd).
  *
  * Dispatches a 'gps-zone-change' CustomEvent on window with:
- *   { zoneKey, zoneName, pdZone, lat, lng }
+ *   { zoneKey, zoneName, pdZone, lat, lon }
  *
  * Exposed global: window.gpsSimulator
  *   .setZone(zoneKey)              → Boolean
- *   .getCurrentCoordinates()       → { lat, lng, zoneKey, zoneName, pdZone }
- *   .getZones()                    → Array<{ id, name, pdZone, lat, lng }>
+ *   .getCurrentCoordinates()       → { lat, lon, zoneKey, zoneName, pdZone }
+ *   .getZones()                    → Array<{ id, name, pdZone, lat, lon }>
  *   .startWalk(intervalMs = DEFAULT_WALK_INTERVAL_MS)  → void
  *   .stopWalk()                    → void
  *   .isWalking                     → Boolean (read-only)
@@ -21,10 +21,10 @@ class GPSSimulator {
         // pdZone maps each named location to a numeric zone ID (1–35)
         // matching the preset message values in Zone_Harness.pd
         this.zones = {
-            home:     { lat: 30.0444, lng: 31.2357, name: "Home Zone",      radius: 0.005, pdZone: 1  },
-            park:     { lat: 30.0350, lng: 31.2200, name: "Park Zone",       radius: 0.006, pdZone: 8  },
-            downtown: { lat: 30.0580, lng: 31.2425, name: "Downtown Cairo",  radius: 0.008, pdZone: 17 },
-            market:   { lat: 30.0650, lng: 31.2500, name: "Market Zone",     radius: 0.004, pdZone: 31 }
+            home:     { lat: 30.0444, lon: 31.2357, name: "Home Zone",      radius: 0.005, pdZone: 1  },
+            park:     { lat: 30.0350, lon: 31.2200, name: "Park Zone",       radius: 0.006, pdZone: 8  },
+            downtown: { lat: 30.0580, lon: 31.2425, name: "Downtown Cairo",  radius: 0.008, pdZone: 17 },
+            market:   { lat: 30.0650, lon: 31.2500, name: "Market Zone",     radius: 0.004, pdZone: 31 }
         };
 
         this._zoneOrder  = ['home', 'park', 'downtown', 'market'];
@@ -47,7 +47,7 @@ class GPSSimulator {
         const offsetLng = (Math.random() - 0.5) * zone.radius * 2;
         return {
             lat:      zone.lat + offsetLat,
-            lng:      zone.lng + offsetLng,
+            lon:      zone.lon + offsetLng,
             zoneKey:  this.currentZone,
             zoneName: zone.name,
             pdZone:   zone.pdZone
@@ -79,7 +79,7 @@ class GPSSimulator {
             name:   this.zones[key].name,
             pdZone: this.zones[key].pdZone,
             lat:    this.zones[key].lat,
-            lng:    this.zones[key].lng
+            lon:    this.zones[key].lon
         }));
     }
 
@@ -140,7 +140,7 @@ class GPSSimulator {
                 zoneName: zone.name,
                 pdZone:   zone.pdZone,
                 lat:      coords.lat,
-                lng:      coords.lng
+                lon:      coords.lon
             }
         }));
     }
