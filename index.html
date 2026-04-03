@@ -352,6 +352,9 @@
         setTimeout(initializeAIUI, 1000);
         </script>
 
+        <!-- GPS Simulator -->
+        <script src="./gps-simulator.js"></script>
+
         <script>
             // Create an App (installable using PWA)
             // if ("serviceWorker" in navigator) {
@@ -362,86 +365,129 @@
             // }
         </script>
 
-        <!-- GPS Zone Simulator -->
+        <!-- GPS Zone Simulator UI (driven by gps-simulator.js) -->
         <script>
         (function () {
-            var ZONE_MIN = 1;
-            var ZONE_MAX = 35;
-            // Quick-access presets covering a spread of zones
-            var ZONE_PRESETS = [1, 4, 8, 12, 17, 22, 27, 31, 35];
+            // Small delay lets gps-simulator.js finish executing and attaching
+            // window.gpsSimulator before the panel queries it.
+            var GPS_PANEL_INIT_DELAY = 200;
 
-            function sendZone(zoneNum) {
-                var z = Math.round(zoneNum);
-                if (z < ZONE_MIN || z > ZONE_MAX || isNaN(z)) return false;
-                if (window.Pd) {
-                    window.Pd.sendFloat("zone", z);
+            function buildGpsPanel() {
+                var sim  = window.gpsSimulator;
+                var host = document.getElementById('GpsZoneHost');
+                if (!sim || !host) {
+                    console.warn('[GPS Panel] Could not initialise: gpsSimulator=' + sim + ', host=' + host);
+                    return;
                 }
-                return z;
-            }
 
-            function buildPanel() {
-                var host = document.getElementById("GpsZoneHost");
-                var panel = document.createElement("div");
-                panel.className = "gps-zone-panel";
+                var panel = document.createElement('div');
+                panel.className = 'gps-zone-panel';
 
-                var title = document.createElement("div");
-                title.className = "gps-zone-title";
-                title.textContent = "📍 GPS Zone Tester";
+                // Title
+                var title = document.createElement('div');
+                title.className = 'gps-zone-title';
+                title.textContent = '📍 GPS Zone Simulator';
                 panel.appendChild(title);
 
-                // Preset buttons
-                var presetsDiv = document.createElement("div");
-                presetsDiv.className = "gps-zone-presets";
-                ZONE_PRESETS.forEach(function (z) {
-                    var btn = document.createElement("button");
-                    btn.className = "gps-zone-preset-btn";
-                    btn.textContent = "Z" + z;
-                    btn.title = "Send zone " + z;
+                // Named-zone buttons (one per registered zone)
+                var zoneRow = document.createElement('div');
+                zoneRow.className = 'gps-zone-presets';
+
+                var activeBtnRef = {};
+
+                sim.getZones().forEach(function (z) {
+                    var btn = document.createElement('button');
+                    btn.className = 'gps-zone-preset-btn';
+                    btn.textContent = z.name + ' (Z' + z.pdZone + ')';
+                    btn.dataset.zoneId = z.id;
+                    btn.title = 'Send zone ' + z.pdZone + ' to Pd';
                     btn.onclick = function () {
-                        input.value = z;
-                        var sent = sendZone(z);
-                        status.textContent = sent !== false ? "✓ Sent zone " + sent + " → [r zone]" : "⚠ Patch not ready yet";
+                        sim.setZone(z.id);
                     };
-                    presetsDiv.appendChild(btn);
+                    activeBtnRef[z.id] = btn;
+                    zoneRow.appendChild(btn);
                 });
-                panel.appendChild(presetsDiv);
+                panel.appendChild(zoneRow);
 
-                // Manual input row
-                var row = document.createElement("div");
-                row.className = "gps-zone-row";
+                // Walk controls row
+                var walkRow = document.createElement('div');
+                walkRow.className = 'gps-zone-row';
 
-                var input = document.createElement("input");
-                input.type = "number";
-                input.className = "gps-zone-input";
-                input.min = ZONE_MIN;
-                input.max = ZONE_MAX;
-                input.value = 1;
-                input.title = "Zone number (1–35)";
-
-                var sendBtn = document.createElement("button");
-                sendBtn.className = "gps-zone-btn";
-                sendBtn.textContent = "Send Zone";
-                sendBtn.onclick = function () {
-                    var val = parseInt(input.value, 10);
-                    var sent = sendZone(val);
-                    status.textContent = sent !== false ? "✓ Sent zone " + sent + " → [r zone]" : "⚠ Value out of range or patch not ready";
+                var startWalkBtn = document.createElement('button');
+                startWalkBtn.className = 'gps-zone-btn';
+                startWalkBtn.style.background = '#2d6a4f';
+                startWalkBtn.textContent = '▶ Start Walk';
+                startWalkBtn.onclick = function () {
+                    var ms = parseInt(intervalInput.value, 10);
+                    sim.startWalk(ms || 4000);
+                    startWalkBtn.disabled = true;
+                    startWalkBtn.style.opacity = '0.45';
+                    stopWalkBtn.disabled = false;
+                    stopWalkBtn.style.opacity = '1';
                 };
 
-                row.appendChild(input);
-                row.appendChild(sendBtn);
-                panel.appendChild(row);
+                var stopWalkBtn = document.createElement('button');
+                stopWalkBtn.className = 'gps-zone-btn';
+                stopWalkBtn.style.background = '#9b2226';
+                stopWalkBtn.textContent = '■ Stop Walk';
+                stopWalkBtn.disabled = true;
+                stopWalkBtn.style.opacity = '0.45';
+                stopWalkBtn.onclick = function () {
+                    sim.stopWalk();
+                    startWalkBtn.disabled = false;
+                    startWalkBtn.style.opacity = '1';
+                    stopWalkBtn.disabled = true;
+                    stopWalkBtn.style.opacity = '0.45';
+                };
 
-                // Status line
-                var status = document.createElement("div");
-                status.className = "gps-zone-status";
-                status.textContent = "Ready — zones 1–35";
-                panel.appendChild(status);
+                var intervalLabel = document.createElement('span');
+                intervalLabel.style.cssText = 'font-size:10px;white-space:nowrap;';
+                intervalLabel.textContent = 'ms:';
+
+                var intervalInput = document.createElement('input');
+                intervalInput.type = 'number';
+                intervalInput.className = 'gps-zone-input';
+                intervalInput.min = 500;
+                intervalInput.max = 30000;
+                intervalInput.value = 4000;
+                intervalInput.title = 'Walk interval in ms';
+
+                walkRow.appendChild(startWalkBtn);
+                walkRow.appendChild(stopWalkBtn);
+                walkRow.appendChild(intervalLabel);
+                walkRow.appendChild(intervalInput);
+                panel.appendChild(walkRow);
+
+                // Live info display
+                var infoDiv = document.createElement('div');
+                infoDiv.className = 'gps-zone-status';
+                infoDiv.style.cssText = 'margin-top:8px;line-height:1.7;';
+                infoDiv.innerHTML = 'Zone: <b>—</b><br>Pd zone: <b>—</b><br>Lat: — &nbsp; Lng: —';
+                panel.appendChild(infoDiv);
 
                 host.appendChild(panel);
+
+                // React to zone changes from gpsSimulator
+                window.addEventListener('gps-zone-change', function (e) {
+                    var d = e.detail;
+                    infoDiv.innerHTML =
+                        'Zone: <b>' + d.zoneName + '</b><br>' +
+                        'Pd zone: <b>' + d.pdZone + '</b> → [r zone]<br>' +
+                        'Lat: ' + d.lat.toFixed(5) + ' &nbsp; Lng: ' + d.lng.toFixed(5);
+
+                    // Highlight the active zone button
+                    Object.keys(activeBtnRef).forEach(function (key) {
+                        activeBtnRef[key].style.background =
+                            key === d.zoneKey ? 'rgba(45,106,79,0.2)' : '';
+                        activeBtnRef[key].style.borderColor =
+                            key === d.zoneKey ? '#2d6a4f' : '';
+                        activeBtnRef[key].style.fontWeight =
+                            key === d.zoneKey ? '700' : '';
+                    });
+                });
             }
 
-            // Build panel after a short delay so the host div is in the DOM
-            setTimeout(buildPanel, 100);
+            setTimeout(buildGpsPanel, GPS_PANEL_INIT_DELAY);
         })();
         </script>
     </body>
