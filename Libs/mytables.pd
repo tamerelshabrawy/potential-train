@@ -1,0 +1,2 @@
+#N canvas 0 25 1920 1027 12;
+#X obj 167 157 table sample\$1 44100;
