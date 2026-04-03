@@ -126,14 +126,6 @@
                 animation: pulse 1s infinite;
             }
 
-            .urban-state-host {
-                position: fixed;
-                left: 12px;
-                bottom: 12px;
-                width: min(340px, calc(100vw - 24px));
-                z-index: 20;
-            }
-
             .urban-state-panel {
                 font-family:
                     ui-monospace,
@@ -253,8 +245,6 @@
 
         <!-- All the styles are in the pd4web.style.css -->
         <span class="pd4web-sound-switch" id="Pd4WebAudioSwitch"></span>
-        <div class="urban-state-host" id="UrbanPerceptualHost"></div>
-        <script src="./urban-perceptual-state.js"></script>
         <script>
             const statusElement = document.getElementById("status");
             const progressElement = document.getElementById("progress");
@@ -304,33 +294,12 @@
                     console.error(err);
                 });
         </script>
-        <script>
-            if (typeof window.setupUrbanPerceptualStatePrototype === "function") {
-                window.setupUrbanPerceptualStatePrototype({
-                    containerId: "UrbanPerceptualHost",
-                    analyzer: {
-                        fftSize: 1024,
-                        updateIntervalMs: 90,
-                        inputAnalysisGain: 3,
-                        featureSmoothingAlpha: 0.28,
-                        scoreSmoothingAlpha: 0.24,
-                        minStateHoldMs: 520,
-                        switchMargin: 0.04,
-                        silenceDbThreshold: -57,
-                        silenceHoldMs: 1400,
-                    },
-                });
-            } else {
-                const host = document.getElementById("UrbanPerceptualHost");
-                host.textContent = "Urban perceptual state module failed to load.";
-            }
-        </script>
 
         <!-- GPS Simulator -->
         <script src="./gps-simulator.js"></script>
 
         <!-- GPS Zone UI -->
-        <div id="gpsHost" style="position: fixed; right: 12px; bottom: 12px; z-index: 20;"></div>
+        <div id="gpsHost" style="position: fixed; left: 12px; bottom: 12px; width: min(260px, calc(100vw - 24px)); z-index: 20;"></div>
         <script>
         (function () {
             var panel = document.createElement('section');
@@ -386,6 +355,61 @@
             updateCoords();
             setInterval(updateCoords, 2000);
         }());
+        </script>
+
+        <!-- AI Classifier Bridge -->
+        <script src="./ai-classifier-bridge.js"></script>
+
+        <!-- AI Control Panel UI -->
+        <div id="aiControlHost" style="position: fixed; right: 12px; bottom: 12px; z-index: 20;"></div>
+
+        <script>
+        function initializeAIUI() {
+            const host = document.getElementById('aiControlHost');
+            const panel = document.createElement('div');
+            panel.style.cssText = 'font-family: monospace; color: #333; background: rgba(250, 250, 250, 0.95); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 10px; padding: 12px; box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2); min-width: 280px;';
+            panel.innerHTML = '<div style="font-size: 12px; font-weight: 600; margin-bottom: 10px;">🎵 Urban AI</div><div style="display: flex; gap: 8px; margin-bottom: 10px;"><button id="aiStartBtn" style="flex: 1; padding: 8px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 11px;">🎤 Start</button><button id="aiStopBtn" style="flex: 1; padding: 8px; background: #ccc; color: white; border: none; border-radius: 5px; cursor: not-allowed; font-weight: 600; font-size: 11px;" disabled>⏹️ Stop</button></div><div style="font-size: 10px; color: #666;"><div style="margin-bottom: 6px;">Sound: <span id="aiClass" style="font-weight: 600; color: #667eea;">---</span></div><div style="margin-bottom: 6px;">Conf: <span id="aiConfidence">---</span></div><div style="margin-bottom: 6px;">Grain: <span id="aiGrainVal">10</span></div><div style="margin-bottom: 6px;">Str: <span id="aiStrVal">100</span>%</div><div style="margin-bottom: 6px;">Wet: <span id="aiWetVal">55</span>%</div><div>PitHi: <span id="aiPitHiVal">12</span></div></div>';
+            host.appendChild(panel);
+
+            document.getElementById('aiStartBtn').onclick = async () => {
+                if (window.aiClassifier) {
+                    await window.aiClassifier.startMicrophoneClassification();
+                    document.getElementById('aiStartBtn').disabled = true;
+                    document.getElementById('aiStartBtn').style.background = '#ccc';
+                    document.getElementById('aiStopBtn').disabled = false;
+                    document.getElementById('aiStopBtn').style.background = '#667eea';
+                }
+            };
+
+            document.getElementById('aiStopBtn').onclick = () => {
+                if (window.aiClassifier) {
+                    window.aiClassifier.stopClassification();
+                    document.getElementById('aiStartBtn').disabled = false;
+                    document.getElementById('aiStartBtn').style.background = '#667eea';
+                    document.getElementById('aiStopBtn').disabled = true;
+                    document.getElementById('aiStopBtn').style.background = '#ccc';
+                }
+            };
+
+            window.addEventListener('ai-classification', (event) => {
+                const { soundClass, confidence, params } = event.detail;
+                document.getElementById('aiClass').textContent = soundClass.toUpperCase();
+                document.getElementById('aiConfidence').textContent = (confidence * 100).toFixed(0) + '%';
+                document.getElementById('aiGrainVal').textContent = params.aiGrain;
+                document.getElementById('aiStrVal').textContent = params.aiStr;
+                document.getElementById('aiWetVal').textContent = params.aiWet;
+                document.getElementById('aiPitHiVal').textContent = params.aiPitHi;
+
+                if (window.Pd) {
+                    window.Pd.sendFloat('street06GrainRate_idlework', params.aiGrain);
+                    window.Pd.sendFloat('street06StretchProb_idlework', params.aiStr);
+                    window.Pd.sendFloat('auraAmt_idlework', params.aiWet / 100);
+                    window.Pd.sendFloat('street06PitchHi_idlework', params.aiPitHi);
+                }
+            });
+        }
+
+        setTimeout(initializeAIUI, 1000);
         </script>
 
         <script>
