@@ -200,7 +200,10 @@
 
     /* ─── Pd bridge ─────────────────────────────────────────────────────────── */
     function sendToPd(name, value) {
-        const pd = window.Pd4WebInstance;
+        // Support both naming conventions used across PRs:
+        //   window.Pd4WebInstance  (set by index.html-update snippet)
+        //   window.Pd              (set by main branch's index.html Pd4WebModule block)
+        const pd = window.Pd4WebInstance || window.Pd;
         if (!pd) return;
         // pd4web embind API
         if (typeof pd.sendFloat === "function") {
@@ -513,10 +516,10 @@
     window.AiClassifierBridge = bridge;
     window.AiClassifier       = AiClassifier;       // expose class for custom instantiation
 
-    // Optional: auto-start when Pd4WebInstance becomes available
+    // Optional: auto-start when Pd4WebInstance (or window.Pd) becomes available
     if (CONFIG.autoStartMs > 0) {
         setTimeout(() => {
-            if (window.Pd4WebInstance) {
+            if (window.Pd4WebInstance || window.Pd) {
                 bridge.start();
             }
         }, CONFIG.autoStartMs);
@@ -525,4 +528,47 @@
     if (location.hostname === "127.0.0.1" || location.hostname === "localhost") {
         console.log("[AiClassifierBridge] loaded. Call window.AiClassifierBridge.start() to begin.");
     }
+
+    /* ─── Backward-compatibility shim ────────────────────────────────────────
+     * Main branch's index.html (merged from PR#4) references:
+     *   window.aiClassifier.startMicrophoneClassification()
+     *   window.aiClassifier.stopClassification()
+     *   CustomEvent 'ai-classification' with detail { soundClass, confidence, params }
+     *     where params = { aiGrain, aiStr, aiWet, aiPitHi }
+     * This shim adapts the new GNB bridge to satisfy those existing bindings.
+     * ────────────────────────────────────────────────────────────────────────── */
+    const _CLASS_PARAMS_COMPAT = {
+        horn:    { aiGrain: 15,  aiStr: 20,  aiWet: 70, aiPitHi:  7 },
+        motor:   { aiGrain: 55,  aiStr: 85,  aiWet: 40, aiPitHi:  0 },
+        chatter: { aiGrain: 30,  aiStr: 45,  aiWet: 60, aiPitHi:  4 },
+        silence: { aiGrain:  5,  aiStr: 100, aiWet: 20, aiPitHi:  0 },
+    };
+
+    window.aiClassifier = {
+        get isRunning()   { return bridge.running; },
+        get currentClass(){ return bridge.getSnapshot().stableClass; },
+        get confidence()  { return bridge.getSnapshot().probabilities[bridge.getSnapshot().stableClass] || 0; },
+
+        startMicrophoneClassification: function () {
+            return bridge.start();
+        },
+        stopClassification: function () {
+            bridge.dispose();
+        },
+    };
+
+    // Translate ai-classifier-update → ai-classification for main's index.html UI
+    window.addEventListener("ai-classifier-update", function (e) {
+        var snap   = e.detail;
+        var cls    = snap.stableClass;
+        var params = Object.assign({}, _CLASS_PARAMS_COMPAT[cls] || _CLASS_PARAMS_COMPAT.silence);
+        window.dispatchEvent(new CustomEvent("ai-classification", {
+            detail: {
+                soundClass: cls,
+                confidence: snap.probabilities[cls] || 0,
+                params:     params,
+            },
+        }));
+    });
+
 })();
