@@ -126,7 +126,7 @@
                 animation: pulse 1s infinite;
             }
 
-            .urban-state-host {
+            .gps-zone-host {
                 position: fixed;
                 left: 12px;
                 bottom: 12px;
@@ -134,7 +134,7 @@
                 z-index: 20;
             }
 
-            .urban-state-panel {
+            .gps-zone-panel {
                 font-family:
                     ui-monospace,
                     "SF Mono",
@@ -143,8 +143,8 @@
                     Consolas,
                     "Liberation Mono",
                     monospace;
-                color: var(--fg);
-                background: rgba(250, 250, 250, 0.92);
+                color: #333;
+                background: rgba(250, 250, 250, 0.95);
                 border: 1px solid rgba(0, 0, 0, 0.1);
                 border-radius: 10px;
                 padding: 12px;
@@ -154,94 +154,70 @@
                 backdrop-filter: blur(10px);
             }
 
-            .urban-state-header,
-            .urban-state-actions,
-            .urban-state-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 10px;
-            }
-
-            .urban-state-header {
+            .gps-zone-title {
+                font-size: 12px;
+                font-weight: 600;
                 margin-bottom: 10px;
             }
 
-            .urban-state-title {
-                font-size: 12px;
+            .gps-zone-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 8px;
+            }
+
+            .gps-zone-input {
+                width: 60px;
+                padding: 5px 7px;
+                border: 1px solid rgba(0,0,0,0.2);
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 11px;
+                text-align: center;
+            }
+
+            .gps-zone-btn {
+                flex: 1;
+                padding: 6px 10px;
+                background: #2d6a4f;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 11px;
                 font-weight: 600;
             }
 
-            .urban-state-pill {
-                padding: 4px 8px;
-                border-radius: 999px;
-                font-size: 11px;
-                font-weight: 700;
-                background: rgba(20, 20, 20, 0.08);
+            .gps-zone-btn:active {
+                opacity: 0.75;
             }
 
-            .urban-state-actions {
-                margin-bottom: 10px;
+            .gps-zone-presets {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-bottom: 8px;
             }
 
-            .urban-state-actions button {
-                border: 0;
-                border-radius: 8px;
-                padding: 7px 10px;
+            .gps-zone-preset-btn {
+                padding: 4px 7px;
+                background: rgba(20,20,20,0.07);
+                border: 1px solid rgba(0,0,0,0.12);
+                border-radius: 5px;
                 cursor: pointer;
-                background: #111;
-                color: white;
-                font-size: 11px;
-            }
-
-            .urban-state-actions button[disabled] {
-                opacity: 0.4;
-                cursor: not-allowed;
-            }
-
-            .urban-state-confidence {
-                font-size: 11px;
-            }
-
-            .urban-state-metrics {
-                display: grid;
-                gap: 8px;
-            }
-
-            .urban-state-row span {
-                min-width: 96px;
-                font-size: 11px;
-            }
-
-            .urban-state-meter {
-                flex: 1;
-                height: 8px;
-                border-radius: 999px;
-                background: rgba(20, 20, 20, 0.08);
-                overflow: hidden;
-            }
-
-            .urban-state-meter > div {
-                height: 100%;
-                width: 0%;
-                border-radius: inherit;
-                background: linear-gradient(90deg, #3a7bd5, #00d2ff);
-                transition: width 180ms ease;
-            }
-
-            .urban-state-panel[data-state="human_active"] .urban-state-meter > div {
-                background: linear-gradient(90deg, #00b894, #55efc4);
-            }
-
-            .urban-state-panel[data-state="harsh_mechanical"] .urban-state-meter > div {
-                background: linear-gradient(90deg, #ff512f, #dd2476);
-            }
-
-            .urban-state-error {
-                min-height: 14px;
-                margin-top: 8px;
                 font-size: 10px;
-                color: #b33939;
+                font-family: inherit;
+            }
+
+            .gps-zone-preset-btn:hover {
+                background: rgba(20,20,20,0.15);
+            }
+
+            .gps-zone-status {
+                font-size: 10px;
+                color: #555;
+                min-height: 14px;
             }
         </style>
     </head>
@@ -253,8 +229,7 @@
 
         <!-- All the styles are in the pd4web.style.css -->
         <span class="pd4web-sound-switch" id="Pd4WebAudioSwitch"></span>
-        <div class="urban-state-host" id="UrbanPerceptualHost"></div>
-        <script src="./urban-perceptual-state.js"></script>
+        <div class="gps-zone-host" id="GpsZoneHost"></div>
         <script>
             const statusElement = document.getElementById("status");
             const progressElement = document.getElementById("progress");
@@ -297,33 +272,26 @@
                         statusElement.style.display = "none";
                         progressElement.style.display = "none";
                         wasmLoader.style.display = "none";
+
+                        // Ensure AudioContext resumes on every click of the sound switch
+                        document.getElementById("Pd4WebAudioSwitch").addEventListener("click", function () {
+                            if (window.Pd && typeof window.Pd.resumeAudio === "function") {
+                                window.Pd.resumeAudio();
+                            }
+                            // Also resume any suspended Web Audio contexts
+                            ["_audioContext", "audioContext"].forEach(function (key) {
+                                var ctx = window.Pd && window.Pd[key];
+                                if (ctx && ctx.state === "suspended") {
+                                    ctx.resume();
+                                }
+                            });
+                        });
                     });
                 })
                 .catch((err) => {
                     statusElement.textContent = "Failed to load WASM.";
                     console.error(err);
                 });
-        </script>
-        <script>
-            if (typeof window.setupUrbanPerceptualStatePrototype === "function") {
-                window.setupUrbanPerceptualStatePrototype({
-                    containerId: "UrbanPerceptualHost",
-                    analyzer: {
-                        fftSize: 1024,
-                        updateIntervalMs: 90,
-                        inputAnalysisGain: 3,
-                        featureSmoothingAlpha: 0.28,
-                        scoreSmoothingAlpha: 0.24,
-                        minStateHoldMs: 520,
-                        switchMargin: 0.04,
-                        silenceDbThreshold: -57,
-                        silenceHoldMs: 1400,
-                    },
-                });
-            } else {
-                const host = document.getElementById("UrbanPerceptualHost");
-                host.textContent = "Urban perceptual state module failed to load.";
-            }
         </script>
 
         <!-- AI Classifier Bridge -->
@@ -384,6 +352,9 @@
         setTimeout(initializeAIUI, 1000);
         </script>
 
+        <!-- GPS Simulator -->
+        <script src="./gps-simulator.js"></script>
+
         <script>
             // Create an App (installable using PWA)
             // if ("serviceWorker" in navigator) {
@@ -392,6 +363,132 @@
             //         .then(() => console.log("Service Worker registered"))
             //         .catch((err) => console.error("Service Worker registration failed:", err));
             // }
+        </script>
+
+        <!-- GPS Zone Simulator UI (driven by gps-simulator.js) -->
+        <script>
+        (function () {
+            // Small delay lets gps-simulator.js finish executing and attaching
+            // window.gpsSimulator before the panel queries it.
+            var GPS_PANEL_INIT_DELAY = 200;
+
+            function buildGpsPanel() {
+                var sim  = window.gpsSimulator;
+                var host = document.getElementById('GpsZoneHost');
+                if (!sim || !host) {
+                    console.warn('[GPS Panel] Could not initialise: gpsSimulator=' + sim + ', host=' + host);
+                    return;
+                }
+
+                var panel = document.createElement('div');
+                panel.className = 'gps-zone-panel';
+
+                // Title
+                var title = document.createElement('div');
+                title.className = 'gps-zone-title';
+                title.textContent = '📍 GPS Zone Simulator';
+                panel.appendChild(title);
+
+                // Named-zone buttons (one per registered zone)
+                var zoneRow = document.createElement('div');
+                zoneRow.className = 'gps-zone-presets';
+
+                var activeBtnRef = {};
+
+                sim.getZones().forEach(function (z) {
+                    var btn = document.createElement('button');
+                    btn.className = 'gps-zone-preset-btn';
+                    btn.textContent = z.name + ' (Z' + z.pdZone + ')';
+                    btn.dataset.zoneId = z.id;
+                    btn.title = 'Send zone ' + z.pdZone + ' to Pd';
+                    btn.onclick = function () {
+                        sim.setZone(z.id);
+                    };
+                    activeBtnRef[z.id] = btn;
+                    zoneRow.appendChild(btn);
+                });
+                panel.appendChild(zoneRow);
+
+                // Walk controls row
+                var walkRow = document.createElement('div');
+                walkRow.className = 'gps-zone-row';
+
+                var startWalkBtn = document.createElement('button');
+                startWalkBtn.className = 'gps-zone-btn';
+                startWalkBtn.style.background = '#2d6a4f';
+                startWalkBtn.textContent = '▶ Start Walk';
+                startWalkBtn.onclick = function () {
+                    var ms = parseInt(intervalInput.value, 10);
+                    sim.startWalk(ms || 4000);
+                    startWalkBtn.disabled = true;
+                    startWalkBtn.style.opacity = '0.45';
+                    stopWalkBtn.disabled = false;
+                    stopWalkBtn.style.opacity = '1';
+                };
+
+                var stopWalkBtn = document.createElement('button');
+                stopWalkBtn.className = 'gps-zone-btn';
+                stopWalkBtn.style.background = '#9b2226';
+                stopWalkBtn.textContent = '■ Stop Walk';
+                stopWalkBtn.disabled = true;
+                stopWalkBtn.style.opacity = '0.45';
+                stopWalkBtn.onclick = function () {
+                    sim.stopWalk();
+                    startWalkBtn.disabled = false;
+                    startWalkBtn.style.opacity = '1';
+                    stopWalkBtn.disabled = true;
+                    stopWalkBtn.style.opacity = '0.45';
+                };
+
+                var intervalLabel = document.createElement('span');
+                intervalLabel.style.cssText = 'font-size:10px;white-space:nowrap;';
+                intervalLabel.textContent = 'ms:';
+
+                var intervalInput = document.createElement('input');
+                intervalInput.type = 'number';
+                intervalInput.className = 'gps-zone-input';
+                intervalInput.min = 500;
+                intervalInput.max = 30000;
+                intervalInput.value = 4000;
+                intervalInput.title = 'Walk interval in ms';
+
+                walkRow.appendChild(startWalkBtn);
+                walkRow.appendChild(stopWalkBtn);
+                walkRow.appendChild(intervalLabel);
+                walkRow.appendChild(intervalInput);
+                panel.appendChild(walkRow);
+
+                // Live info display
+                var infoDiv = document.createElement('div');
+                infoDiv.className = 'gps-zone-status';
+                infoDiv.style.cssText = 'margin-top:8px;line-height:1.7;';
+                infoDiv.innerHTML = 'Zone: <b>—</b><br>Pd zone: <b>—</b><br>Lat: — &nbsp; Lon: —';
+                panel.appendChild(infoDiv);
+
+                host.appendChild(panel);
+
+                // React to zone changes from gpsSimulator
+                window.addEventListener('gps-zone-change', function (e) {
+                    var d = e.detail;
+                    infoDiv.innerHTML =
+                        'Zone: <b>' + d.zoneName + '</b><br>' +
+                        'Pd zone: <b>' + d.pdZone + '</b> → [r zone]<br>' +
+                        'Lat: ' + d.lat.toFixed(5) + ' &nbsp; Lon: ' + d.lon.toFixed(5);
+
+                    // Highlight the active zone button
+                    Object.keys(activeBtnRef).forEach(function (key) {
+                        activeBtnRef[key].style.background =
+                            key === d.zoneKey ? 'rgba(45,106,79,0.2)' : '';
+                        activeBtnRef[key].style.borderColor =
+                            key === d.zoneKey ? '#2d6a4f' : '';
+                        activeBtnRef[key].style.fontWeight =
+                            key === d.zoneKey ? '700' : '';
+                    });
+                });
+            }
+
+            setTimeout(buildGpsPanel, GPS_PANEL_INIT_DELAY);
+        })();
         </script>
     </body>
 </html>
