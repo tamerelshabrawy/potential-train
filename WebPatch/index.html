@@ -263,7 +263,37 @@
         <script>
             fetchWithProgress("./pd4web.wasm")
                 .then((wasmBuffer) => {
-                    Pd4WebModule({ wasmBinary: wasmBuffer }).then((Pd4WebModulePromise) => {
+                    Pd4WebModule({ wasmBinary: wasmBuffer }).then(async (Pd4WebModulePromise) => {
+                        // pd4web.data was compiled with the old readsf~-based street aura patch.
+                        // Override it in the Emscripten virtual FS with the live ADC version
+                        // so that the running patch captures from the microphone instead of
+                        // playing back the pre-recorded sample file.
+                        const fsOverrides = [
+                            {
+                                // Replace the bundled readsf~ version with the ADC capture version.
+                                fsPath:   "/Libs/street_aura_session06_idlework.pd",
+                                fetchUrl: "../Libs/street_aura_session06_idlework_adc.pd",
+                            },
+                            {
+                                // Inject the ADC capture sub-patch which is not in the bundle.
+                                fsPath:   "/Libs/streetAuraAdcCapture06_idlework.pd",
+                                fetchUrl: "../Libs/streetAuraAdcCapture06_idlework.pd",
+                            },
+                        ];
+                        for (const entry of fsOverrides) {
+                            try {
+                                const resp = await fetch(entry.fetchUrl);
+                                if (resp.ok) {
+                                    const text = await resp.text();
+                                    Pd4WebModulePromise.FS.writeFile(entry.fsPath, text);
+                                } else {
+                                    console.warn("[pd4web] Could not fetch patch override:", entry.fetchUrl, resp.status);
+                                }
+                            } catch (err) {
+                                console.warn("[pd4web] FS override failed for", entry.fsPath, err);
+                            }
+                        }
+
                         window.Pd = new Pd4WebModulePromise.Pd4Web();
                         window.Pd.openPatch("index.pd", {
                             soundToggleId: "Pd4WebAudioSwitch",

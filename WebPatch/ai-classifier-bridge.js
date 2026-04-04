@@ -557,15 +557,36 @@
         },
     };
 
-    // Translate ai-classifier-update → ai-classification for main's index.html UI
+    // Translate ai-classifier-update → ai-classification for main's index.html UI.
+    // Parameters are probability-weighted blends across all four classes so that
+    // transitions feel smooth and proportional rather than jumping to fixed values
+    // the instant the stable class flips.
     window.addEventListener("ai-classifier-update", function (e) {
-        var snap   = e.detail;
-        var cls    = snap.stableClass;
-        var params = Object.assign({}, _CLASS_PARAMS_COMPAT[cls] || _CLASS_PARAMS_COMPAT.silence);
+        var snap  = e.detail;
+        var cls   = snap.stableClass;
+        var probs = snap.probabilities;
+        var p     = _CLASS_PARAMS_COMPAT;
+
+        var wSilence = probs.silence  || 0;
+        var wChatter = probs.chatter  || 0;
+        var wMotor   = probs.motor    || 0;
+        var wHorn    = probs.horn     || 0;
+
+        var params = {
+            aiGrain: Math.round(wSilence * p.silence.aiGrain  + wChatter * p.chatter.aiGrain +
+                                wMotor   * p.motor.aiGrain    + wHorn    * p.horn.aiGrain),
+            aiStr:   Math.round(wSilence * p.silence.aiStr    + wChatter * p.chatter.aiStr   +
+                                wMotor   * p.motor.aiStr      + wHorn    * p.horn.aiStr),
+            aiWet:   Math.round(wSilence * p.silence.aiWet    + wChatter * p.chatter.aiWet   +
+                                wMotor   * p.motor.aiWet      + wHorn    * p.horn.aiWet),
+            aiPitHi: Math.round(wSilence * p.silence.aiPitHi  + wChatter * p.chatter.aiPitHi +
+                                wMotor   * p.motor.aiPitHi    + wHorn    * p.horn.aiPitHi),
+        };
+
         window.dispatchEvent(new CustomEvent("ai-classification", {
             detail: {
                 soundClass: cls,
-                confidence: snap.probabilities[cls] || 0,
+                confidence: probs[cls] || 0,
                 params:     params,
             },
         }));
