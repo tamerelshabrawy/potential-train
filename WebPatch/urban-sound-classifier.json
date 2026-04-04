@@ -1,1 +1,122 @@
-{"horn":34,"motor":20,"chatter":20,"silence":6}
+{
+  "version": "1.0.0",
+  "description": "Gaussian Naive Bayes urban sound classifier — 80 training samples across 4 classes",
+  "classes": ["silence", "chatter", "motor", "horn"],
+  "classIndices": {
+    "silence": 0,
+    "chatter": 1,
+    "motor":   2,
+    "horn":    3
+  },
+  "sampleCounts": {
+    "horn":    34,
+    "motor":   20,
+    "chatter": 20,
+    "silence":  6
+  },
+  "totalSamples": 80,
+  "features": [
+    "rmsDb",
+    "centroidHz",
+    "flatness",
+    "flux",
+    "speechLowRatio",
+    "speechMidRatio",
+    "harshRatio",
+    "airRatio"
+  ],
+  "classProfiles": {
+    "silence": {
+      "prior": 0.075,
+      "mean": {
+        "rmsDb":          -73.0,
+        "centroidHz":     900.0,
+        "flatness":         0.68,
+        "flux":             0.025,
+        "speechLowRatio":   0.19,
+        "speechMidRatio":   0.12,
+        "harshRatio":       0.07,
+        "airRatio":         0.05
+      },
+      "variance": {
+        "rmsDb":          25.0,
+        "centroidHz":     200000.0,
+        "flatness":         0.018,
+        "flux":             0.0003,
+        "speechLowRatio":   0.004,
+        "speechMidRatio":   0.002,
+        "harshRatio":       0.001,
+        "airRatio":         0.0008
+      }
+    },
+    "chatter": {
+      "prior": 0.25,
+      "mean": {
+        "rmsDb":          -49.0,
+        "centroidHz":     1950.0,
+        "flatness":         0.21,
+        "flux":             0.17,
+        "speechLowRatio":   0.38,
+        "speechMidRatio":   0.34,
+        "harshRatio":       0.11,
+        "airRatio":         0.035
+      },
+      "variance": {
+        "rmsDb":          64.0,
+        "centroidHz":     320000.0,
+        "flatness":         0.012,
+        "flux":             0.009,
+        "speechLowRatio":   0.018,
+        "speechMidRatio":   0.016,
+        "harshRatio":       0.004,
+        "airRatio":         0.0015
+      }
+    },
+    "motor": {
+      "prior": 0.25,
+      "mean": {
+        "rmsDb":          -37.0,
+        "centroidHz":     580.0,
+        "flatness":         0.44,
+        "flux":             0.07,
+        "speechLowRatio":   0.47,
+        "speechMidRatio":   0.16,
+        "harshRatio":       0.15,
+        "airRatio":         0.04
+      },
+      "variance": {
+        "rmsDb":          81.0,
+        "centroidHz":     75000.0,
+        "flatness":         0.022,
+        "flux":             0.002,
+        "speechLowRatio":   0.028,
+        "speechMidRatio":   0.009,
+        "harshRatio":       0.006,
+        "airRatio":         0.001
+      }
+    },
+    "horn": {
+      "prior": 0.425,
+      "mean": {
+        "rmsDb":          -27.0,
+        "centroidHz":     1150.0,
+        "flatness":         0.24,
+        "flux":             0.21,
+        "speechLowRatio":   0.27,
+        "speechMidRatio":   0.30,
+        "harshRatio":       0.23,
+        "airRatio":         0.085
+      },
+      "variance": {
+        "rmsDb":          144.0,
+        "centroidHz":     180000.0,
+        "flatness":         0.015,
+        "flux":             0.012,
+        "speechLowRatio":   0.014,
+        "speechMidRatio":   0.016,
+        "harshRatio":       0.014,
+        "airRatio":         0.004
+      }
+    }
+  }
+}
