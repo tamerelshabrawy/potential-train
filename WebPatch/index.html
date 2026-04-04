@@ -270,8 +270,10 @@
                         // playing back the pre-recorded sample file.
                         const fsOverrides = [
                             {
-                                // Replace the bundled readsf~ version with the ADC capture version.
-                                fsPath:   "/Libs/street_aura_session06_idlework.pd",
+                                // Inject the ADC capture version at the path index.pd actually loads.
+                                // (index.pd references street_aura_session06_idlework_adc, not the
+                                // readsf~ version, so we must write to the _adc path.)
+                                fsPath:   "/Libs/street_aura_session06_idlework_adc.pd",
                                 fetchUrl: "../Libs/street_aura_session06_idlework_adc.pd",
                             },
                             {

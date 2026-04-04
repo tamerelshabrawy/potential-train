@@ -48,7 +48,7 @@
         inputLowpassHz:      9000,      // remove ultrasonic content
         smoothingAlpha:      0.30,      // exponential smoothing on log-probs (0=no smooth)
         minStateHoldMs:      420,       // minimum ms before stable class can change
-        silenceDbThreshold:  -60,       // rmsDb below this → force silence class
+        silenceDbThreshold:  -55,       // rmsDb below this → force silence class
         silenceHoldMs:       1200,      // ms of silence before class resets to silence
         minDb:               -90,
         maxDb:               -12,
