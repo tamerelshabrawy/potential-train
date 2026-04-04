@@ -422,7 +422,7 @@
                 startWalkBtn.textContent = '▶ Start Walk';
                 startWalkBtn.onclick = function () {
                     var ms = parseInt(intervalInput.value, 10);
-                    sim.startWalk(ms || 4000);
+                    sim.startWalk(ms || 30000);
                     startWalkBtn.disabled = true;
                     startWalkBtn.style.opacity = '0.45';
                     stopWalkBtn.disabled = false;
@@ -451,8 +451,8 @@
                 intervalInput.type = 'number';
                 intervalInput.className = 'gps-zone-input';
                 intervalInput.min = 500;
-                intervalInput.max = 30000;
-                intervalInput.value = 4000;
+                intervalInput.max = 120000;
+                intervalInput.value = 30000;
                 intervalInput.title = 'Walk interval in ms';
 
                 walkRow.appendChild(startWalkBtn);

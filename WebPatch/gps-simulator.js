@@ -85,7 +85,7 @@ class GPSSimulator {
 
     /**
      * Starts an automatic walk that cycles through every zone on a timer.
-     * @param {number} intervalMs – ms between zone transitions (default 4000, min 500)
+     * @param {number} intervalMs – ms between zone transitions (default 30000, min 500)
      */
     startWalk(intervalMs) {
         if (this.isWalking) return;
@@ -148,6 +148,6 @@ class GPSSimulator {
 
 // Walk timing constants
 GPSSimulator.MIN_WALK_INTERVAL_MS     = 500;
-GPSSimulator.DEFAULT_WALK_INTERVAL_MS = 4000;
+GPSSimulator.DEFAULT_WALK_INTERVAL_MS = 30000;
 
 window.gpsSimulator = new GPSSimulator();
