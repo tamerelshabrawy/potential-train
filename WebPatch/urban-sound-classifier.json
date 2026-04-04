@@ -15,7 +15,7 @@
     "silence":  6
   },
   "totalSamples": 80,
-  "priorNote": "Priors reflect realistic street-walk class distribution, not raw training-sample counts (silence:6, chatter:20, motor:20, horn:34 of 80 total). The original horn prior of 0.425 (= 34/80) biased the classifier toward horn for all ambiguous sounds.",
+  "priorNote": "Priors reflect realistic street-walk class distribution. Horn prior reduced to 0.10 (from raw 0.425=34/80) because horns are rare events; motor raised to 0.35 because it dominates most Cairo street ambience; silence raised to 0.20 to cover quiet moments. Horn rmsDb and centroidHz variances tightened so the classifier only commits to horn for genuinely loud, mid-frequency transients instead of treating every ambiguous frame as a horn.",
   "features": [
     "rmsDb",
     "centroidHz",
@@ -28,7 +28,7 @@
   ],
   "classProfiles": {
     "silence": {
-      "prior": 0.15,
+      "prior": 0.20,
       "mean": {
         "rmsDb":          -73.0,
         "centroidHz":     900.0,
@@ -74,7 +74,7 @@
       }
     },
     "motor": {
-      "prior": 0.30,
+      "prior": 0.35,
       "mean": {
         "rmsDb":          -37.0,
         "centroidHz":     580.0,
@@ -97,7 +97,7 @@
       }
     },
     "horn": {
-      "prior": 0.20,
+      "prior": 0.10,
       "mean": {
         "rmsDb":          -27.0,
         "centroidHz":     1150.0,
@@ -109,8 +109,8 @@
         "airRatio":         0.085
       },
       "variance": {
-        "rmsDb":          144.0,
-        "centroidHz":     180000.0,
+        "rmsDb":          81.0,
+        "centroidHz":     120000.0,
         "flatness":         0.015,
         "flux":             0.012,
         "speechLowRatio":   0.014,
