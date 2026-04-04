@@ -69,14 +69,17 @@
 <script src="./ai-classifier-bridge.js"></script>
 
 
-<!-- ❸  EXPOSE Pd4WebInstance — modify your existing Pd4WebModule block:
-        Find the lines:
+<!-- ❸  EXPOSE Pd4WebInstance — SKIP THIS STEP if your index.html already sets
+        window.Pd (the current WebPatch does: window.Pd = new Pd4WebModulePromise.Pd4Web()).
+        The bridge checks window.Pd4WebInstance || window.Pd automatically.
+
+        If your index.html uses the ORIGINAL template (no window.Pd set), find:
             const Pd4Web = new Pd4WebModulePromise.Pd4Web();
             Pd4Web.openPatch("index.pd", { ... });
         And add ONE line immediately after openPatch():
             window.Pd4WebInstance = Pd4Web;
 
-        The complete modified block should look like this: -->
+        The complete modified block (original template only) looks like this: -->
 <script>
     fetchWithProgress("./pd4web.wasm")
         .then((wasmBuffer) => {
@@ -85,7 +88,7 @@
                 Pd4Web.openPatch("index.pd", {
                     soundToggleId: "Pd4WebAudioSwitch",
                 });
-                // ← ADD THIS LINE so ai-classifier-bridge.js can send to Pd
+                // ← Only needed if your index.html doesn't already set window.Pd
                 window.Pd4WebInstance = Pd4Web;
 
                 const wasmLoader = document.getElementById("wasm-loader");
