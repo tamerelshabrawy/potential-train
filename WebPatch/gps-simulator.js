@@ -88,7 +88,9 @@ class GPSSimulator {
      * @param {number} intervalMs – ms between zone transitions (default 30000, min 500)
      */
     startWalk(intervalMs) {
-        if (this.isWalking) return;
+        if (this.isWalking) {
+            this.stopWalk();
+        }
         var ms = (typeof intervalMs === 'number' && intervalMs >= GPSSimulator.MIN_WALK_INTERVAL_MS)
             ? intervalMs
             : GPSSimulator.DEFAULT_WALK_INTERVAL_MS;

@@ -53,6 +53,48 @@
     var FADE_SILENT = 0;
     var FADE_FULL   = 1;
 
+    /* ------------------------------------------------------------------
+     * Blank state: zero all instrument toggles/runs before each scene.
+     * Scenes have incomplete parameter sets (only list instruments they
+     * USE), so without this reset, instruments from the previous scene
+     * keep playing and all zones sound identical.
+     * ------------------------------------------------------------------ */
+    var BLANK_STATE = {
+        'mel1Toggle-r': 0,  'mel1Toggle': 0,
+        'str1Toggle-r': 0,  'str1Toggle': 0,
+        'wnd1Toggle-r': 0,  'wnd1Toggle': 0,
+        'crd1Toggle-r': 0,  'crd1Toggle': 0,
+        'str2Toggle-r': 0,  'str2Toggle': 0,
+        'arp1Toggle-r': 0,
+        'arp2Toggle-r': 0,
+        'arp3Toggle-r': 0,
+        'synth1Toggle-r': 0, 'synth1Toggle': 0,
+        'TablaToggle_q-r': 0,
+        'drums1Toggle-r': 0, 'drums1KickOn-r': 0,
+        'chmToggle-r': 0,
+        'voxToggle-r': 0,
+        'HarpToggle-r': 0,  'HarpToggle': 0,
+        'StreetAuraToggle_idlework-r': 0, 'StreetAuraToggle_idlework': 0,
+        'zilsToggle-r': 0,
+        'chr2Toggle-r': 0,
+        'celbToggle-r': 0,
+        'prog1Toggle-r': 0,
+        'prog2Toggle-r': 0,
+        'hov1Toggle-r': 0,  'hov1Toggle': 0,
+        'hov2Toggle-r': 0,  'hov2Toggle': 0,
+        'hov3Toggle-r': 0,  'hov3Toggle': 0,
+        'hov_Toggle-r': 0,  'hov_Toggle': 0,
+        'Disc_bassToggle-r': 0,
+        'waterRun-r': 0,    'waterRun': 0,
+        '1003run': 0,
+        'stut1On-r': 0,     'stut1On': 0,
+        'hihatRun-r': 0,
+        'sagat2Run-r': 0,
+        'clapRun-r': 0,
+        'shaabiRun-r': 0,
+        '1039-run-r': 0,    '1039-run': 0
+    };
+
 // Auto-generated scene parameter data from soundwalk_scene.pd
 // To regenerate: run the Python parser script in the repository comments
 var SCENE_PARAMS = {
@@ -118,6 +160,13 @@ var SCENE_PARAMS = {
         if (!params) {
             console.warn('[SceneRouter] No params for scene', sceneKey);
             return;
+        }
+        /* Zero all instrument toggles/runs first so instruments not listed
+         * in this scene's params are properly silenced (scenes only include
+         * instruments they USE, leaving previous-scene state otherwise). */
+        var blankKeys = Object.keys(BLANK_STATE);
+        for (var i = 0; i < blankKeys.length; i++) {
+            sendFloat(blankKeys[i], BLANK_STATE[blankKeys[i]]);
         }
         var keys = Object.keys(params);
         for (var i = 0; i < keys.length; i++) {

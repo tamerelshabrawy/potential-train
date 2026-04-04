@@ -421,10 +421,8 @@
                 startWalkBtn.style.background = '#2d6a4f';
                 startWalkBtn.textContent = '▶ Start Walk';
                 startWalkBtn.onclick = function () {
-                    var ms = parseInt(intervalInput.value, 10);
-                    sim.startWalk(ms || 30000);
-                    startWalkBtn.disabled = true;
-                    startWalkBtn.style.opacity = '0.45';
+                    var ms = parseInt(intervalInput.value, 10) || 30000;
+                    sim.startWalk(ms);
                     stopWalkBtn.disabled = false;
                     stopWalkBtn.style.opacity = '1';
                 };
@@ -437,8 +435,6 @@
                 stopWalkBtn.style.opacity = '0.45';
                 stopWalkBtn.onclick = function () {
                     sim.stopWalk();
-                    startWalkBtn.disabled = false;
-                    startWalkBtn.style.opacity = '1';
                     stopWalkBtn.disabled = true;
                     stopWalkBtn.style.opacity = '0.45';
                 };
