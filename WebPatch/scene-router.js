@@ -148,9 +148,13 @@ var SCENE_PARAMS = {
     /* ------------------------------------------------------------------
      * Helpers
      * ------------------------------------------------------------------ */
+    var _pdWarnedOnce = false;
     function sendFloat(name, value) {
         if (window.Pd && typeof window.Pd.sendFloat === 'function') {
             window.Pd.sendFloat(name, value);
+        } else if (!_pdWarnedOnce) {
+            _pdWarnedOnce = true;
+            console.warn('[SceneRouter] window.Pd not ready — Pd messages will be dropped until the patch loads.');
         }
     }
 

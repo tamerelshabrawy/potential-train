@@ -1,9 +1,10 @@
 /**
  * gps-simulator.js
  *
- * Simulates GPS positioning across named soundwalk zones and bridges each
- * zone change into the pd4web patch by sending a float on the [r zone]
- * receiver (values 1–35 as defined in Zone_Harness.pd).
+ * Simulates GPS positioning across named soundwalk zones.  Each zone change
+ * dispatches a 'gps-zone-change' CustomEvent on window; scene-router.js
+ * listens for that event and drives the Pd patch via individual sendFloat
+ * calls (WebPatch/index.pd has no [r zone] receiver).
  *
  * Dispatches a 'gps-zone-change' CustomEvent on window with:
  *   { zoneKey, zoneName, pdZone, lat, lon }
@@ -131,11 +132,9 @@ class GPSSimulator {
 
         console.log('[GPSSimulator] Zone →', zone.name, '(pdZone:', zone.pdZone + ')');
 
-        // Send numeric zone ID to [r zone] in the Pd patch
-        if (window.Pd && typeof window.Pd.sendFloat === 'function') {
-            window.Pd.sendFloat('zone', zone.pdZone);
-        }
-
+        // NOTE: index.pd has no [r zone] receiver; scene-router.js handles
+        // all Pd communication by listening for the 'gps-zone-change' event
+        // and sending individual scene-parameter floats.
         window.dispatchEvent(new CustomEvent('gps-zone-change', {
             detail: {
                 zoneKey:  zoneKey,
