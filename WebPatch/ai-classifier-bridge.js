@@ -321,7 +321,7 @@
                 await this.loadModel();
             }
             await this.attachMicrophone();
-            this.start();
+            AiClassifier.prototype.start.call(this);
         }
 
         /* ── private ────────────────────────────────────────────────────────── */
